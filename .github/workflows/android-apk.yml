@@ -29,10 +29,16 @@ jobs:
         run: npm install @capacitor/core @capacitor/cli
       - name: Create Capacitor config
         run: |
-          cat > capacitor.config.ts <<'EOF'
-          import type { CapacitorConfig } from '@capacitor/cli';
-          const config: CapacitorConfig = { appId: 'com.shreeaivideo.app', appName: 'Shree AI Video', webDir: '.next', server: { url: process.env.CAP_SERVER_URL, cleartext: false } };
-          export default config;
+          cat > capacitor.config.json <<EOF
+          {
+            "appId": "com.shreeaivideo.app",
+            "appName": "Shree AI Video",
+            "webDir": ".next",
+            "server": {
+              "url": "${CAP_SERVER_URL}",
+              "cleartext": false
+            }
+          }
           EOF
       - name: Add Android platform
         run: npx cap add android
