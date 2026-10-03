@@ -35,6 +35,8 @@ export default function Home() {
   const removeScene=(id:number)=>{setScenes(v=>v.filter(s=>s.id!==id).map((s,i)=>({...s,id:i+1})));setStatus("Scene removed.");};
   const makeStory=()=>{const topics=["A mysterious signal appears in the night sky.","A young explorer follows the signal into an ancient forest.","Inside the forest, a hidden doorway opens.","The explorer finds a glowing city and discovers its secret.","At sunrise, the journey becomes a new beginning."];setScript(topics.join("\n"));setScenes([]);setStatus("AI-style story draft created — edit it before rendering.");};
   const saveProject=()=>{try{localStorage.setItem(PROJECT_KEY,JSON.stringify({script,scenes,images,musicName,captions,captionStyle}));setStatus("Project saved on this device.");}catch{setStatus("Could not save project. Browser storage may be full.");}};
+  const exportProject=()=>{try{const payload={version:1,exportedAt:new Date().toISOString(),script,scenes,images,musicName,captions,captionStyle};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shree-ai-video-project.json";a.click();URL.revokeObjectURL(url);setStatus("Project JSON exported.");}catch{setStatus("Could not export project.");}};
+  const importProject=(file:File)=>{const reader=new FileReader();reader.onload=()=>{try{const p=JSON.parse(String(reader.result));if(typeof p.script!=="string"||!Array.isArray(p.scenes))throw new Error();setScript(p.script);setScenes(p.scenes);setImages(p.images&&typeof p.images==="object"?p.images:{});setMusicName(typeof p.musicName==="string"?p.musicName:"");setCaptions(typeof p.captions==="boolean"?p.captions:true);setCaptionStyle(["box","clean","neon"].includes(p.captionStyle)?p.captionStyle:"box");setStatus("Project JSON imported.");}catch{setStatus("Invalid Shree AI Video project file.");}};reader.readAsText(file);};
   const loadProject=()=>{try{const raw=localStorage.getItem(PROJECT_KEY);if(!raw){setStatus("No saved project found.");return;}const p=JSON.parse(raw);setScript(typeof p.script==="string"?p.script:starter);setScenes(Array.isArray(p.scenes)?p.scenes:[]);setImages(p.images&&typeof p.images==="object"?p.images:{});setMusicName(typeof p.musicName==="string"?p.musicName:"");setCaptions(typeof p.captions==="boolean"?p.captions:true);setCaptionStyle(["box","clean","neon"].includes(p.captionStyle)?p.captionStyle:"box");setStatus("Saved project loaded.");}catch{setStatus("Saved project could not be loaded.");}};
   const speak=(text:string)=>{if(typeof window==="undefined"||!("speechSynthesis" in window)){setStatus("Browser voice is not available.");return;}window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=voice==="slow"?.85:voice==="fast"?1.15:1;window.speechSynthesis.speak(u);setStatus("Voice preview playing…");};
   const attachImage=(id:number,file:File)=>{setImages(v=>({...v,[id]:URL.createObjectURL(file)}));};
@@ -63,7 +65,7 @@ export default function Home() {
           await new Promise(r=>requestAnimationFrame(r));
         }
       }
-    }finally{music?.pause();audioContext?.close();recorder.stop();}
+    }finally{music?.pause();if(music)music.currentTime=0;audioContext?.close();recorder.stop();}
     await done;const blob=new Blob(chunks,{type:"video/webm"});setExportUrl(URL.createObjectURL(blob));setStatus(`Final video ready • ${totalDuration}s • ${captions?"captions on":"captions off"}`);
   };
 
@@ -72,7 +74,7 @@ export default function Home() {
     <section className="hero"><div><p className="eyebrow">IDEA → SCRIPT → TIMELINE → AI MEDIA → VIDEO</p><h1>Make vertical videos from an idea.</h1><p className="sub">Build scenes, control timing, add captions and music, generate AI media, save your project and render 9:16 video.</p></div></section>
     <section className="toolbar card">
       <div><div><b>AI-style story assistant</b><p>Creates a ready-to-edit scene outline locally.</p></div><button onClick={makeStory}>✨ Generate story</button></div>
-      <div><div><b>Project</b><p>Save/load your current work on this device.</p></div><div className="projectBtns"><button onClick={saveProject}>Save</button><button onClick={loadProject}>Load</button></div></div>
+      <div><div><b>Project</b><p>Save/load your current work on this device.</p></div><div className="projectBtns"><button onClick={saveProject}>Save</button><button onClick={loadProject}>Load</button><button onClick={exportProject}>Export</button><label className="mini upload">Import<input type="file" accept="application/json,.json" onChange={e=>{const f=e.target.files?.[0];if(f)importProject(f);e.currentTarget.value=""}}/></label></div></div>
       <div><div><b>Voice preview</b><p>Uses your browser’s built-in speech engine.</p></div><select value={voice} onChange={e=>setVoice(e.target.value)}><option value="default">Normal</option><option value="slow">Slow</option><option value="fast">Fast</option></select></div>
       <div><div><b>Background music</b><p>{musicName||"Optional audio file for the final render."}</p></div><label className="upload">Choose music<input type="file" accept="audio/*" onChange={e=>{const f=e.target.files?.[0];if(f)attachMusic(f)}}/></label></div>
     </section>
