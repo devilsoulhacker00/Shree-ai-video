@@ -21,10 +21,10 @@ jobs:
         with:
           node-version: 20
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
       - name: Install Capacitor
         run: npm install @capacitor/core @capacitor/cli @capacitor/android
       - name: Create Capacitor config
