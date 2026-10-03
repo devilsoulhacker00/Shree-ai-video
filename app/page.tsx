@@ -48,6 +48,7 @@ export default function Home() {
   const [captionPosition,setCaptionPosition]=useState<"top"|"center"|"bottom">("bottom");
   const [captionSize,setCaptionSize]=useState(28);
   const [history,setHistory]=useState<string[]>([]); const [historyIndex,setHistoryIndex]=useState(-1);
+  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveProject()} if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();if(e.shiftKey){document.querySelector<HTMLButtonElement>(".undoTools button:last-child")?.click()}else document.querySelector<HTMLButtonElement>(".undoTools button:first-child")?.click()} if(e.key==="Escape")setSelectedScene(-1)};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey)},[]);
   const [trimStart,setTrimStart]=useState<Record<number,number>>({});
   const [trimEnd,setTrimEnd]=useState<Record<number,number>>({});
 
