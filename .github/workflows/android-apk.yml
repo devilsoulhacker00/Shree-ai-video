@@ -1,14 +1,20 @@
 name: Android APK
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       app_url:
         description: "Live HTTPS URL of Shree AI Video"
-        required: true
+        required: false
         type: string
+        default: "https://shree-ai-video.vercel.app/"
+
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      CAP_SERVER_URL: ${{ inputs.app_url || 'https://shree-ai-video.vercel.app/' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,8 +35,6 @@ jobs:
           export default config;
           EOF
       - name: Add Android platform
-        env:
-          CAP_SERVER_URL: ${{ inputs.app_url }}
         run: npx cap add android
       - name: Build debug APK
         working-directory: android
