@@ -52,10 +52,10 @@ jobs:
 
           configurations.configureEach {
             resolutionStrategy.force(
-              "org.jetbrains.kotlin:kotlin-stdlib:1.8.22",
-              "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22",
-              "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+              "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
             )
+            exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+            exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
           }
           EOF
       - name: Build debug APK
@@ -67,5 +67,3 @@ jobs:
           name: shree-ai-video-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
-
-# Trigger APK build verification
