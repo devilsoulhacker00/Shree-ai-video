@@ -32,7 +32,13 @@ export default function Home() {
   const [renderProgress,setRenderProgress]=useState(0);
   const [rendering,setRendering]=useState(false);
   const [dragScene,setDragScene]=useState<number|null>(null);
-  const [dirty,setDirty]=useState(false);\n  const [idea,setIdea]=useState("");\n  const [busyScript,setBusyScript]=useState(false);\n  const [sceneAudios,setSceneAudios]=useState<Record<number,string>>({});\n  const [busyVoice,setBusyVoice]=useState<number|null>(null);\n  const [autoBusy,setAutoBusy]=useState(false);\n  const [autoProgress,setAutoProgress]=useState(0);
+  const [dirty,setDirty]=useState(false);
+  const [idea,setIdea]=useState("");
+  const [busyScript,setBusyScript]=useState(false);
+  const [sceneAudios,setSceneAudios]=useState<Record<number,string>>({});
+  const [busyVoice,setBusyVoice]=useState<number|null>(null);
+  const [autoBusy,setAutoBusy]=useState(false);
+  const [autoProgress,setAutoProgress]=useState(0);
 
   const sceneCount=useMemo(()=>script.split(/\n+/).filter(s=>s.trim()).length,[script]);
   const totalDuration=useMemo(()=>scenes.reduce((n,s)=>n+s.duration,0),[scenes]);
@@ -53,11 +59,13 @@ export default function Home() {
   const moveScene=(id:number,dir:-1|1)=>{const i=scenes.findIndex(s=>s.id===id),j=i+dir;if(i<0||j<0||j>=scenes.length)return;reorderScene(i,j);};
   const reorderScene=(from:number,to:number)=>{if(from===to||from<0||to<0||from>=scenes.length||to>=scenes.length)return;const order=[...scenes];const [item]=order.splice(from,1);order.splice(to,0,item);const oldImages={...images};const next=order.map((s,i)=>({...s,id:i+1}));const source:Record<number,string>={};order.forEach((s,i)=>{if(oldImages[s.id])source[i+1]=oldImages[s.id];});setImages(remapImages(next,source));setSceneAudios(v=>{const out:Record<number,string>={};order.forEach((s,i)=>{if(v[s.id])out[i+1]=v[s.id]});return out;});setScenes(next);setSelectedScene(to);setPreviewScene(to);markDirty();setStatus(`Scene moved to position ${to+1}.`);};
   const removeScene=(id:number)=>{const oldImages={...images};delete oldImages[id];const next=scenes.filter(s=>s.id!==id).map((s,i)=>({...s,id:i+1}));setImages(remapImages(next,oldImages));setSceneAudios(v=>{const out:Record<number,string>={};next.forEach(s=>{if(v[s.id])out[s.id]=v[s.id]});return out;});setScenes(next);setSelectedScene(i=>Math.max(0,Math.min(i,next.length-1)));setPreviewScene(i=>Math.max(0,Math.min(i,next.length-1)));markDirty();setStatus("Scene removed.");};
-  const generateScript=async()=>{if(!idea.trim()){setStatus("Write a video idea first.");return;}setBusyScript(true);setStatus("AI is writing your script…");try{const res=await fetch("/api/generate-script",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({idea,scenes:5})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"AI script generation failed.");setScript(data.script);setScenes([]);setSelectedScene(0);setPreviewScene(0);markDirty();setStatus("AI script ready — create scenes to continue.");}catch(err){setStatus(err instanceof Error?err.message:"AI script generation failed.");}finally{setBusyScript(false);}};\n  const generateVoiceover=async(scene:Scene)=>{setBusyVoice(scene.id);setStatus(`Generating AI voice for scene ${scene.id}…`);try{const res=await fetch("/api/generate-voice",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:scene.text})});if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.error||"AI voice generation failed.");}const data=await blobToDataUrl(await res.blob());setSceneAudios(v=>({...v,[scene.id]:data}));markDirty();setStatus(`AI voice ready for scene ${scene.id}.`);}catch(err){setStatus(err instanceof Error?err.message:"AI voice generation failed.");}finally{setBusyVoice(null);}};\n  const makeStory=()=>{const topics=["A mysterious signal appears in the night sky.","A young explorer follows the signal into an ancient forest.","Inside the forest, a hidden doorway opens.","The explorer finds a glowing city and discovers its secret.","At sunrise, the journey becomes a new beginning."];setScript(topics.join("\n"));setScenes([]);setSelectedScene(0);setPreviewScene(0);markDirty();setStatus("Story draft created — edit it before rendering.");};
-  const saveProject=()=>{try{localStorage.setItem(PROJECT_KEY,JSON.stringify({version:4,script,scenes,images,musicName,captions,captionStyle}));setDirty(false);setStatus("Project saved on this device.");}catch{setStatus("Could not save project. Browser storage may be full.");}};
+  const generateScript=async()=>{if(!idea.trim()){setStatus("Write a video idea first.");return;}setBusyScript(true);setStatus("AI is writing your script…");try{const res=await fetch("/api/generate-script",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({idea,scenes:5})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"AI script generation failed.");setScript(data.script);setScenes([]);setSelectedScene(0);setPreviewScene(0);markDirty();setStatus("AI script ready — create scenes to continue.");}catch(err){setStatus(err instanceof Error?err.message:"AI script generation failed.");}finally{setBusyScript(false);}};
+  const generateVoiceover=async(scene:Scene)=>{setBusyVoice(scene.id);setStatus(`Generating AI voice for scene ${scene.id}…`);try{const res=await fetch("/api/generate-voice",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:scene.text})});if(!res.ok){const d=await res.json().catch(()=>({}));throw new Error(d.error||"AI voice generation failed.");}const data=await blobToDataUrl(await res.blob());setSceneAudios(v=>({...v,[scene.id]:data}));markDirty();setStatus(`AI voice ready for scene ${scene.id}.`);}catch(err){setStatus(err instanceof Error?err.message:"AI voice generation failed.");}finally{setBusyVoice(null);}};
+  const makeStory=()=>{const topics=["A mysterious signal appears in the night sky.","A young explorer follows the signal into an ancient forest.","Inside the forest, a hidden doorway opens.","The explorer finds a glowing city and discovers its secret.","At sunrise, the journey becomes a new beginning."];setScript(topics.join("\n"));setScenes([]);setSelectedScene(0);setPreviewScene(0);markDirty();setStatus("Story draft created — edit it before rendering.");};
+  const saveProject=()=>{try{localStorage.setItem(PROJECT_KEY,JSON.stringify({version:5,script,scenes,images,sceneAudios,musicName,captions,captionStyle}));setDirty(false);setStatus("Project saved on this device.");}catch{setStatus("Could not save project. Browser storage may be full.");}};
   const exportProject=async()=>{try{setStatus("Preparing portable project…");const portableImages:Record<number,string>={};for(const [id,url] of Object.entries(images)){if(url.startsWith("data:")){portableImages[Number(id)]=url;continue;}try{const res=await fetch(url);const blob=await res.blob();portableImages[Number(id)]=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=reject;reader.readAsDataURL(blob);});}catch{}}const portableAudios:Record<number,string>={};for(const [id,url] of Object.entries(sceneAudios)){if(url.startsWith("data:"))portableAudios[Number(id)]=url;}const payload={version:3,exportedAt:new Date().toISOString(),script,scenes,images:portableImages,sceneAudios:portableAudios,musicName,captions,captionStyle};const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shree-ai-video-project.json";a.click();URL.revokeObjectURL(url);setStatus("Portable project exported with scene images.");}catch{setStatus("Could not export project.");}};
   const importProject=(file:File)=>{const reader=new FileReader();reader.onload=()=>{try{const p=JSON.parse(String(reader.result));if(typeof p.script!=="string"||!Array.isArray(p.scenes))throw new Error();setScript(p.script);setScenes(normaliseScenes(p.scenes));setSelectedScene(0);setPreviewScene(0);setImages(p.images&&typeof p.images==="object"?p.images:{});setSceneAudios(p.sceneAudios&&typeof p.sceneAudios==="object"?p.sceneAudios:{});setMusicName(typeof p.musicName==="string"?p.musicName:"");setCaptions(typeof p.captions==="boolean"?p.captions:true);setCaptionStyle(["box","clean","neon"].includes(p.captionStyle)?p.captionStyle:"box");setDirty(false);setStatus("Project JSON imported.");}catch{setStatus("Invalid Shree AI Video project file.");}};reader.readAsText(file);};
-  const loadProject=()=>{try{const raw=localStorage.getItem(PROJECT_KEY);if(!raw){setStatus("No saved project found.");return;}const p=JSON.parse(raw);setScript(typeof p.script==="string"?p.script:starter);setScenes(normaliseScenes(p.scenes));setSelectedScene(0);setPreviewScene(0);setImages(p.images&&typeof p.images==="object"?p.images:{});setMusicName(typeof p.musicName==="string"?p.musicName:"");setCaptions(typeof p.captions==="boolean"?p.captions:true);setCaptionStyle(["box","clean","neon"].includes(p.captionStyle)?p.captionStyle:"box");setDirty(false);setStatus("Saved project loaded.");}catch{setStatus("Saved project could not be loaded.");}};
+  const loadProject=()=>{try{const raw=localStorage.getItem(PROJECT_KEY);if(!raw){setStatus("No saved project found.");return;}const p=JSON.parse(raw);setScript(typeof p.script==="string"?p.script:starter);setScenes(normaliseScenes(p.scenes));setSelectedScene(0);setPreviewScene(0);setImages(p.images&&typeof p.images==="object"?p.images:{});setSceneAudios(p.sceneAudios&&typeof p.sceneAudios==="object"?p.sceneAudios:{});setMusicName(typeof p.musicName==="string"?p.musicName:"");setCaptions(typeof p.captions==="boolean"?p.captions:true);setCaptionStyle(["box","clean","neon"].includes(p.captionStyle)?p.captionStyle:"box");setDirty(false);setStatus("Saved project loaded.");}catch{setStatus("Saved project could not be loaded.");}};
   const speak=(text:string)=>{if(typeof window==="undefined"||!("speechSynthesis" in window)){setStatus("Browser voice is not available.");return;}window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.rate=voice==="slow"?.85:voice==="fast"?1.15:1;window.speechSynthesis.speak(u);setStatus("Voice preview playing…");};
   const attachImage=async(id:number,file:File)=>{try{const data=await blobToDataUrl(file);setImages(v=>({...v,[id]:data}));markDirty();setStatus(`Image added to scene ${id}.`);}catch{setStatus("Could not read image.");}};
   const attachMusic=(file:File)=>{setMusicUrl(URL.createObjectURL(file));setMusicName(file.name);markDirty();setStatus("Background music selected for this session.");};
@@ -73,15 +81,54 @@ export default function Home() {
     setStatus(musicUrl?"Rendering timeline with mixed background music…":"Rendering timeline…");
     const canvas=document.createElement("canvas");const dims=aspect==="16:9"?[1280,720]:aspect==="1:1"?[1080,1080]:[720,1280];canvas.width=dims[0];canvas.height=dims[1];const ctx=canvas.getContext("2d")!;
     const videoStream=canvas.captureStream(30);let audioContext:AudioContext|undefined;let music:HTMLAudioElement|undefined;let audioDestination:MediaStreamAudioDestinationNode|undefined;const voiceSources:AudioBufferSourceNode[]=[];
-    if(musicUrl||scenes.some(s=>sceneAudios[s.id])){try{audioContext=new AudioContext();music=new Audio(musicUrl);music.loop=true;music.volume=.22;const source=audioContext.createMediaElementSource(music);audioDestination=audioContext.createMediaStreamDestination();source.connect(audioDestination);source.connect(audioContext.destination);await audioContext.resume();await music.play();}catch{setStatus("Music could not be mixed; rendering video without audio.");music=undefined;}}
-    if(audioContext&&scenes.some(s=>sceneAudios[s.id])){for(const scene of scenes){const url=sceneAudios[scene.id];if(!url)continue;try{const response=await fetch(url);const buffer=await audioContext.decodeAudioData(await response.arrayBuffer());const source=audioContext.createBufferSource();source.buffer=buffer;const gain=audioContext.createGain();gain.gain.value=.95;source.connect(gain);gain.connect(audioDestination?audioDestination:audioContext.destination);voiceSources.push(source);}catch{}}}
-    if(audioContext&&!audioDestination&&voiceSources.length)audioDestination=audioContext.createMediaStreamDestination();
-    if(audioDestination&&voiceSources.length){for(const source of voiceSources){try{const gain=audioContext!.createGain();source.disconnect();source.connect(gain);gain.connect(audioDestination);}catch{}}}
+    const hasVoice=scenes.some(s=>Boolean(sceneAudios[s.id]));
+    if(musicUrl||hasVoice){
+      try{
+        audioContext=new AudioContext();
+        audioDestination=audioContext.createMediaStreamDestination();
+        await audioContext.resume();
+        if(musicUrl){
+          music=new Audio(musicUrl);
+          music.loop=true;
+          music.volume=.22;
+          const musicSource=audioContext.createMediaElementSource(music);
+          musicSource.connect(audioDestination);
+          musicSource.connect(audioContext.destination);
+          await music.play();
+        }
+        const renderStart=audioContext.currentTime+.15;
+        let offset=0;
+        for(const scene of scenes){
+          const url=sceneAudios[scene.id];
+          if(url){
+            try{
+              const response=await fetch(url);
+              const buffer=await audioContext.decodeAudioData(await response.arrayBuffer());
+              const source=audioContext.createBufferSource();
+              source.buffer=buffer;
+              const gain=audioContext.createGain();
+              gain.gain.value=.95;
+              source.connect(gain);
+              gain.connect(audioDestination);
+              voiceSources.push(source);
+              source.start(renderStart+offset);
+            }catch{}
+          }
+          offset+=scene.duration;
+        }
+      }catch{
+        setStatus("Audio mixing could not be started; rendering video without audio.");
+        audioContext?.close();
+        audioContext=undefined;
+        audioDestination=undefined;
+        music=undefined;
+      }
+    }
     const tracks=[...videoStream.getVideoTracks(),...(audioDestination?.stream.getAudioTracks()||[])];
     const stream=new MediaStream(tracks);const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm";
     const recorder=new MediaRecorder(stream,{mimeType:mime});const chunks:BlobPart[]=[];recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);const done=new Promise<void>(resolve=>recorder.onstop=()=>resolve());recorder.start();
     try{
-      for(let index=0;index<scenes.length;index++){const scene=scenes[index],start=performance.now(),sceneDuration=scene.duration*1000,src=images[scene.id];if(voiceSources[index]&&audioContext)voiceSources[index].start(audioContext.currentTime);let img:HTMLImageElement|undefined;
+      for(let index=0;index<scenes.length;index++){const scene=scenes[index],start=performance.now(),sceneDuration=scene.duration*1000,src=images[scene.id];let img:HTMLImageElement|undefined;
         if(src){img=new Image();img.src=src;await new Promise(r=>{img!.onload=()=>r(null);img!.onerror=()=>r(null);});}
         while(performance.now()-start<sceneDuration){const p=Math.min(1,(performance.now()-start)/sceneDuration);ctx.fillStyle="#07111f";ctx.fillRect(0,0,canvas.width,canvas.height);
           if(img){const scale=1+.08*p,w=canvas.width*scale,h=canvas.height*scale;let x=(canvas.width-w)/2;if(scene.transition==="slide"&&index>0)x+=(1-Math.min(1,p/.45))*canvas.width;ctx.globalAlpha=scene.transition==="fade"?Math.min(1,p/.35):.86;ctx.drawImage(img,x,(canvas.height-h)/2,w,h);ctx.globalAlpha=1;}
@@ -99,7 +146,8 @@ export default function Home() {
   return <main>
     <header><div className="brand"><span>✦</span><div><b>Shree AI Video</b><small>AI Video Creation Studio</small></div></div><span className="pill">{dirty?"UNSAVED":"SAVED"} • LOCAL + AI</span></header>
     <section className="hero"><div><p className="eyebrow">IDEA → SCRIPT → TIMELINE → AI MEDIA → VIDEO</p><h1>Make vertical videos from an idea.</h1><p className="sub">Build scenes, control timing, add captions and music, generate AI media, save your project and render 9:16 video.</p></div></section>
-    <section className="card aiScriptPanel"><div className="aiScriptInput"><div><b>AI script generator</b><p>Describe your video idea and turn it into editable scenes.</p></div><textarea value={idea} onChange={e=>setIdea(e.target.value)} placeholder="Example: A 30-second motivational video about never giving up." /></div><div className="aiScriptActions"><button className="primary" onClick={generateScript} disabled={busyScript}>{busyScript?"Writing…":"✨ Generate AI script"}</button><span>Uses your server-side AI key.</span></div></section>\n    <section className="toolbar card">
+    <section className="card aiScriptPanel"><div className="aiScriptInput"><div><b>AI script generator</b><p>Describe your video idea and turn it into editable scenes.</p></div><textarea value={idea} onChange={e=>setIdea(e.target.value)} placeholder="Example: A 30-second motivational video about never giving up." /></div><div className="aiScriptActions"><button className="primary" onClick={generateScript} disabled={busyScript}>{busyScript?"Writing…":"✨ Generate AI script"}</button><span>Uses your server-side AI key.</span></div></section>
+    <section className="toolbar card">
       <div><div><b>AI-style story assistant</b><p>Creates a ready-to-edit scene outline locally.</p></div><button onClick={makeStory}>✨ Generate story</button></div>
       <div><div><b>Project</b><p>Save/load your current work on this device.</p></div><div className="projectBtns"><button onClick={saveProject}>Save</button><button onClick={loadProject}>Load</button><button onClick={exportProject}>Export</button><label className="mini upload">Import<input type="file" accept="application/json,.json" onChange={e=>{const f=e.target.files?.[0];if(f)importProject(f);e.currentTarget.value=""}}/></label></div></div>
       <div><div><b>Voice preview</b><p>Uses your browser’s built-in speech engine.</p></div><select value={voice} onChange={e=>setVoice(e.target.value)}><option value="default">Normal</option><option value="slow">Slow</option><option value="fast">Fast</option></select></div>
