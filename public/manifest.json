@@ -1,0 +1,11 @@
+{
+  "name": "Shree AI Video",
+  "short_name": "Shree AI Video",
+  "description": "AI video creation studio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07111d",
+  "theme_color": "#07111d",
+  "orientation": "portrait",
+  "icons": []
+}
