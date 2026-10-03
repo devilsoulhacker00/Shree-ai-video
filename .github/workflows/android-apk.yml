@@ -29,6 +29,7 @@ jobs:
         run: npm install @capacitor/core @capacitor/cli @capacitor/android
       - name: Create Capacitor config
         run: |
+          mkdir -p .next
           cat > capacitor.config.json <<EOF
           {
             "appId": "com.shreeaivideo.app",
@@ -42,6 +43,8 @@ jobs:
           EOF
       - name: Add Android platform
         run: npx cap add android
+      - name: Sync Android platform
+        run: npx cap sync android
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug
