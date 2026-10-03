@@ -26,6 +26,9 @@ export default function Home() {
   const [previewScene,setPreviewScene]=useState(0);
   const [previewPlaying,setPreviewPlaying]=useState(false);
   const [selectedScene,setSelectedScene]=useState(0);
+  const [aspect,setAspect]=useState<"9:16"|"16:9"|"1:1">("9:16");
+  const [renderProgress,setRenderProgress]=useState(0);
+  const [rendering,setRendering]=useState(false);
 
   const sceneCount=useMemo(()=>script.split(/\n+/).filter(s=>s.trim()).length,[script]);
   const totalDuration=useMemo(()=>scenes.reduce((n,s)=>n+s.duration,0),[scenes]);
@@ -57,8 +60,10 @@ export default function Home() {
 
   const exportVideo=async()=>{
     if(!scenes.length){setStatus("Create scenes first.");return;}
+    if(rendering)return;
+    setRendering(true);setRenderProgress(0);
     setStatus(musicUrl?"Rendering timeline with mixed background music…":"Rendering timeline…");
-    const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;const ctx=canvas.getContext("2d")!;
+    const canvas=document.createElement("canvas");const dims=aspect==="16:9"?[1280,720]:aspect==="1:1"?[1080,1080]:[720,1280];canvas.width=dims[0];canvas.height=dims[1];const ctx=canvas.getContext("2d")!;
     const videoStream=canvas.captureStream(30);let audioContext:AudioContext|undefined;let music:HTMLAudioElement|undefined;let audioDestination:MediaStreamAudioDestinationNode|undefined;
     if(musicUrl){try{audioContext=new AudioContext();music=new Audio(musicUrl);music.loop=true;music.volume=.22;const source=audioContext.createMediaElementSource(music);audioDestination=audioContext.createMediaStreamDestination();source.connect(audioDestination);source.connect(audioContext.destination);await audioContext.resume();await music.play();}catch{setStatus("Music could not be mixed; rendering video without audio.");music=undefined;}}
     const tracks=[...videoStream.getVideoTracks(),...(audioDestination?.stream.getAudioTracks()||[])];
@@ -72,11 +77,12 @@ export default function Home() {
           const grad=ctx.createLinearGradient(0,620,0,1280);grad.addColorStop(0,"transparent");grad.addColorStop(1,"rgba(0,0,0,.94)");ctx.fillStyle=grad;ctx.fillRect(0,620,720,660);
           if(captions)drawCaption(ctx,scene.text,captionStyle,p);
           ctx.fillStyle="#9fb3c8";ctx.font="18px system-ui";ctx.textAlign="center";ctx.fillText(`Scene ${scene.id} • Shree AI Video`,360,1215);
+          setRenderProgress(Math.min(99,Math.round(((index+(performance.now()-start)/sceneDuration)/scenes.length)*100)));
           await new Promise(r=>requestAnimationFrame(r));
         }
       }
-    }finally{music?.pause();if(music)music.currentTime=0;audioContext?.close();recorder.stop();}
-    await done;const blob=new Blob(chunks,{type:"video/webm"});setExportUrl(URL.createObjectURL(blob));setStatus(`Final video ready • ${totalDuration}s • ${captions?"captions on":"captions off"}`);
+    }finally{music?.pause();if(music)music.currentTime=0;audioContext?.close();recorder.stop();setRendering(false);}
+    await done;const blob=new Blob(chunks,{type:"video/webm"});setExportUrl(URL.createObjectURL(blob));setRenderProgress(100);setStatus(`Final video ready • ${totalDuration}s • ${aspect} • ${captions?"captions on":"captions off"}`);
   };
 
   return <main>
@@ -102,7 +108,7 @@ export default function Home() {
     </section>
 
     <section className="card aiVideo"><div className="cardHead"><div><h2>4. AI video generator</h2><p>Server-side provider adapter keeps your API key out of the browser.</p></div><div className="videoControls"><label>Seconds <select value={duration} onChange={e=>setDuration(Number(e.target.value))}><option value={2}>2</option><option value={4}>4</option><option value={6}>6</option><option value={8}>8</option></select></label><button className="primary" onClick={generateVideo} disabled={!scenes.length||busyVideo}>{busyVideo?"Generating…":"✨ Generate AI video"}</button></div></div>{aiVideoUrl&&<div className="aiVideoResult"><video src={aiVideoUrl} controls playsInline/><a className="download" href={aiVideoUrl} download="shree-ai-video-ai.mp4">⬇ Download AI video</a></div>}</section>
-    <section className="card render"><div><h2>5. Final render</h2><p>Local 9:16 WebM render with timeline, captions, transitions and mixed music.</p></div><button className="primary" onClick={exportVideo} disabled={!scenes.length}>Render final video</button>{status&&<div className="status">{status}</div>}{exportUrl&&<a className="download" href={exportUrl} download="shree-ai-video.webm">⬇ Download WebM</a>}</section>
+    <section className="card render"><div><h2>5. Final render</h2><p>Browser-rendered WebM with selectable aspect ratio, captions, transitions and mixed music.</p></div><div className="renderControls"><label>Format <select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)} disabled={rendering}><option value="9:16">9:16 Vertical</option><option value="16:9">16:9 Landscape</option><option value="1:1">1:1 Square</option></select></label><button className="primary" onClick={exportVideo} disabled={!scenes.length||rendering}>{rendering?`Rendering ${renderProgress}%…`:"Render final video"}</button></div>{rendering&&<div className="progressWrap"><div className="progressBar"><i style={{width:`${renderProgress}%`}}/></div><span>{renderProgress}%</span></div>}{status&&<div className="status">{status}</div>}{exportUrl&&<a className="download" href={exportUrl} download={`shree-ai-video-${aspect.replace(":","x")}.webm`}>⬇ Download WebM</a>}</section>
     <footer>Shree AI Video • captions • timeline • transitions • mixed music • AI media • browser rendering</footer>
   </main>;
 }
